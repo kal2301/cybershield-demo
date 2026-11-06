@@ -1,0 +1,180 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>CyberShield - Demo Statis</title>
+    <link rel="stylesheet" href="assets/style.css">
+</head>
+<body>
+<aside class="sidebar">
+    <div class="brand">
+        <span class="logo">&#9919;</span>
+        <div><b>CyberShield</b><small>Network Security Monitor</small></div>
+    </div>
+    <nav>
+        <a href="#dashboard" data-page="dashboard"><i>&#9632;</i> Dashboard</a>
+        <a href="#firewall" data-page="firewall"><i>&#9881;</i> Manajemen Firewall</a>
+        <a href="#traffic" data-page="traffic"><i>&#9889;</i> Simulasi Traffic &amp; Serangan</a>
+        <a href="#logs" data-page="logs"><i>&#9776;</i> Log Keamanan</a>
+        <a href="#blacklist" data-page="blacklist"><i>&#9940;</i> Blacklist IP</a>
+    </nav>
+    <div class="side-foot">
+        <div class="side-stat"><span>Aturan aktif</span><b id="side-rules">-</b></div>
+        <div class="side-stat"><span>IP diblokir</span><b id="side-bl">-</b></div>
+        <div class="live"><span class="dot"></span> Firewall aktif</div>
+        <div class="demo-tag">Mode demo statis: data tersimpan di browser<br><a href="#" id="btn-reset-demo">Reset data demo</a></div>
+    </div>
+</aside>
+
+<main>
+    <header class="topbar">
+        <h1 id="page-title">Dashboard</h1>
+        <div class="clock" id="clock"></div>
+    </header>
+
+    <!-- ===================== 1. DASHBOARD ===================== -->
+    <section id="page-dashboard" class="page">
+        <div class="cards">
+            <div class="card c-cyan"><span class="label">Total Paket Diperiksa</span><b id="st-packets">0</b><small>paket jaringan</small></div>
+            <div class="card c-green"><span class="label">Koneksi Diizinkan</span><b id="st-allowed">0</b><small>koneksi lolos firewall</small></div>
+            <div class="card c-red"><span class="label">Ancaman Diblokir</span><b id="st-blocked">0</b><small>koneksi ditolak</small></div>
+            <div class="card c-amber"><span class="label">Aturan Firewall Aktif</span><b id="st-rules">0</b><small>aturan berjalan</small></div>
+        </div>
+        <div class="grid-2">
+            <div class="panel">
+                <div class="panel-head">
+                    <div><h3>Volume Traffic Waktu Nyata</h3><p>Jumlah paket per 5 menit (60 menit terakhir)</p></div>
+                    <div class="legend"><span class="lg g"></span>Diizinkan <span class="lg r"></span>Diblokir</div>
+                </div>
+                <canvas id="chart"></canvas>
+            </div>
+            <div class="panel">
+                <div class="panel-head"><div><h3>Port Paling Sering Diblokir</h3><p>Berdasarkan log keamanan</p></div></div>
+                <div id="top-ports"></div>
+            </div>
+        </div>
+        <div class="panel">
+            <div class="panel-head"><div><h3>Peringatan Keamanan Terkini</h3><p>Koneksi yang baru saja diblokir</p></div></div>
+            <div class="table-wrap">
+                <table>
+                    <thead><tr><th>Waktu</th><th>IP Asal</th><th>Port Tujuan</th><th>Aktivitas</th><th>Tindakan</th></tr></thead>
+                    <tbody id="alerts"></tbody>
+                </table>
+            </div>
+        </div>
+    </section>
+
+    <!-- ===================== 2. FIREWALL ===================== -->
+    <section id="page-firewall" class="page">
+        <div class="panel">
+            <div class="panel-head"><div><h3>Tambah Aturan Firewall</h3><p>Isi <code>*</code> pada IP untuk semua alamat, port <code>0</code> untuk semua port</p></div></div>
+            <form id="rule-form" class="form-row">
+                <label>Nama aturan<input name="rule_name" maxlength="100" placeholder="mis. Blokir FTP" required></label>
+                <label>Alamat IP<input name="ip_address" value="*" maxlength="45" placeholder="* atau 192.168.1.5"></label>
+                <label>Port<input name="port" type="number" min="0" max="65535" value="0" required></label>
+                <label>Protokol
+                    <select name="protocol"><option>ANY</option><option>TCP</option><option>UDP</option></select>
+                </label>
+                <label>Tindakan
+                    <select name="action"><option value="BLOCK">BLOCK (blokir)</option><option value="ALLOW">ALLOW (izinkan)</option></select>
+                </label>
+                <button class="btn primary" type="submit">+ Tambah Aturan</button>
+            </form>
+        </div>
+        <div class="panel">
+            <div class="panel-head"><div><h3>Daftar Aturan</h3><p>Geser saklar untuk mengaktifkan / menonaktifkan aturan</p></div></div>
+            <div class="table-wrap">
+                <table>
+                    <thead><tr><th>#</th><th>Nama</th><th>IP</th><th>Port</th><th>Protokol</th><th>Tindakan</th><th>Aktif</th><th></th></tr></thead>
+                    <tbody id="rules-body"></tbody>
+                </table>
+            </div>
+        </div>
+    </section>
+
+    <!-- ===================== 3. SIMULASI ===================== -->
+    <section id="page-traffic" class="page">
+        <div class="panel">
+            <div class="panel-head"><div><h3>Kontrol Simulasi</h3><p>Setiap koneksi dicek oleh mesin firewall lalu dicatat ke log</p></div></div>
+            <div class="btn-row">
+                <button class="btn primary" data-sim="normal">&#9654; Traffic Normal</button>
+                <button class="btn" id="btn-auto">&#8635; Auto Traffic: OFF</button>
+                <span class="sep"></span>
+                <button class="btn danger" data-sim="portscan">Port Scan</button>
+                <button class="btn danger" data-sim="bruteforce">Brute Force SSH</button>
+                <button class="btn danger" data-sim="synflood">DDoS SYN Flood</button>
+                <button class="btn danger" data-sim="sqli">SQL Injection</button>
+            </div>
+            <div id="sim-banner" class="banner">Pilih skenario di atas untuk memulai simulasi.</div>
+            <div class="mini-stats">
+                <div>Diizinkan <b id="sim-allowed" class="t-green">0</b></div>
+                <div>Diblokir <b id="sim-blocked" class="t-red">0</b></div>
+                <div>Status koneksi terakhir <span id="last-status">-</span></div>
+            </div>
+        </div>
+        <div class="grid-2">
+            <div class="panel">
+                <div class="panel-head"><div><h3>Lalu Lintas Jaringan (Simulasi)</h3><p>Terbaru di atas</p></div></div>
+                <ul id="feed" class="feed"></ul>
+            </div>
+            <div class="panel">
+                <div class="panel-head"><div><h3>Uji Koneksi Manual</h3><p>Cek apakah IP &amp; port tertentu lolos firewall</p></div></div>
+                <form id="test-form" class="stack">
+                    <label>Alamat IP sumber<input name="ip" placeholder="mis. 192.168.1.20" required></label>
+                    <label>Port tujuan<input name="port" type="number" min="1" max="65535" placeholder="mis. 23" required></label>
+                    <button class="btn primary" type="submit">Uji Koneksi</button>
+                </form>
+                <div id="test-result" class="result"></div>
+            </div>
+        </div>
+    </section>
+
+    <!-- ===================== 4. LOG ===================== -->
+    <section id="page-logs" class="page">
+        <div class="panel">
+            <div class="panel-head">
+                <div><h3>Log Keamanan</h3><p>Waktu kejadian, IP sumber, port tujuan, jenis aktivitas, dan tindakan sistem</p></div>
+                <div class="btn-row">
+                    <select id="log-status"><option value="ALL">Semua</option><option value="ALLOWED">Diizinkan</option><option value="BLOCKED">Diblokir</option></select>
+                    <input id="log-q" placeholder="Cari IP / aktivitas / port">
+                    <button class="btn" id="btn-seed">Isi Data Demo</button>
+                    <button class="btn danger" id="btn-clear">Hapus Log</button>
+                </div>
+            </div>
+            <div class="table-wrap tall">
+                <table>
+                    <thead><tr><th>Waktu</th><th>IP Sumber</th><th>Port Tujuan</th><th>Jenis Aktivitas</th><th>Paket</th><th>Tindakan Sistem</th><th>Keterangan</th></tr></thead>
+                    <tbody id="logs-body"></tbody>
+                </table>
+            </div>
+        </div>
+    </section>
+
+    <!-- ===================== 5. BLACKLIST ===================== -->
+    <section id="page-blacklist" class="page">
+        <div class="panel">
+            <div class="panel-head"><div><h3>Tambah IP ke Blacklist</h3><p>IP di blacklist selalu diblokir, apa pun aturan firewall-nya</p></div></div>
+            <form id="bl-form" class="form-row">
+                <label>Alamat IP<input name="ip_address" maxlength="45" placeholder="mis. 203.0.113.45" required></label>
+                <label class="grow">Alasan<input name="reason" maxlength="255" placeholder="mis. Brute force berulang"></label>
+                <button class="btn primary" type="submit">+ Blacklist</button>
+            </form>
+        </div>
+        <div class="panel">
+            <div class="panel-head"><div><h3>Daftar IP Terblokir</h3><p id="bl-count"></p></div></div>
+            <div class="table-wrap">
+                <table>
+                    <thead><tr><th>#</th><th>Alamat IP</th><th>Alasan</th><th>Ditambahkan</th><th></th></tr></thead>
+                    <tbody id="bl-body"></tbody>
+                </table>
+            </div>
+        </div>
+    </section>
+</main>
+
+<div id="toasts"></div>
+<script src="assets/mock-api.js"></script>
+<script src="assets/app.js"></script>
+</body>
+</html>
